@@ -60,11 +60,11 @@
                 const siriWaveConfig = {
                     container: this.visualization,
                     style: this.settings.style,
-                    amplitude: this.settings.amplitude,
+                    amplitude: 0, // Start at 0, will be updated by audio analysis
                     speed: this.settings.speed,
                     height: this.settings.height,
                     cover: true,
-                    autostart: false,
+                    autostart: false, // We'll control start/stop based on audio playback
                 };
 
                 // Only add color for iOS classic style
@@ -82,24 +82,23 @@
             if (!this.audio) return;
 
             try {
-                // Create audio context
+                // Create audio context (only once)
                 const AudioContext = window.AudioContext || window.webkitAudioContext;
                 this.audioContext = new AudioContext();
 
-                // Create analyser
+                // Create and configure analyser
                 this.analyser = this.audioContext.createAnalyser();
-                this.analyser.fftSize = 256;
-                this.analyser.smoothingTimeConstant = 0.8;
+                this.analyser.fftSize = 512; // Increased for better frequency resolution
+                this.analyser.smoothingTimeConstant = 0.85; // Slight smoothing for cleaner visualization
 
                 const bufferLength = this.analyser.frequencyBinCount;
                 this.dataArray = new Uint8Array(bufferLength);
 
-                // Connect audio element to analyser
-                if (!this.source) {
-                    this.source = this.audioContext.createMediaElementSource(this.audio);
-                    this.source.connect(this.analyser);
-                    this.analyser.connect(this.audioContext.destination);
-                }
+                // Connect audio element to analyser (only once per audio element)
+                // This creates the audio graph: audio -> analyser -> destination (speakers)
+                this.source = this.audioContext.createMediaElementSource(this.audio);
+                this.source.connect(this.analyser);
+                this.analyser.connect(this.audioContext.destination);
             } catch (error) {
                 console.error('Error setting up audio context:', error);
             }
@@ -143,9 +142,7 @@
             this.siriWave.stop();
             
             // Smoothly reduce amplitude to 0
-            if (this.siriWave.setAmplitude) {
-                this.siriWave.setAmplitude(0);
-            }
+            this.siriWave.setAmplitude(0);
         }
 
         updateAmplitude() {
@@ -154,24 +151,22 @@
             // Get frequency data
             this.analyser.getByteFrequencyData(this.dataArray);
 
-            // Calculate average amplitude
+            // Calculate average amplitude from frequency data
             let sum = 0;
             for (let i = 0; i < this.dataArray.length; i++) {
                 sum += this.dataArray[i];
             }
             const average = sum / this.dataArray.length;
 
-            // Normalize to 0-1 range and apply base amplitude
+            // Normalize to 0-1 range and apply base amplitude setting
+            // The multiplication factor helps make the visualization more responsive
             const normalizedAmplitude = (average / 255) * this.settings.amplitude * 3;
 
-            // Update SiriWave amplitude
-            if (this.siriWave.setAmplitude) {
-                // Add minimum amplitude to keep animation visible
-                const finalAmplitude = Math.max(0.1, normalizedAmplitude);
-                this.siriWave.setAmplitude(finalAmplitude);
-            }
+            // Set amplitude with a minimum value to keep animation visible even during silence
+            const finalAmplitude = Math.max(0.1, normalizedAmplitude);
+            this.siriWave.setAmplitude(finalAmplitude);
 
-            // Continue updating
+            // Continue updating on next animation frame
             requestAnimationFrame(() => this.updateAmplitude());
         }
 
