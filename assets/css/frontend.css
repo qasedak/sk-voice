@@ -19,6 +19,11 @@
     position: relative;
 }
 
+/* Custom background colors override default gradients */
+.sk-voice-visualization[style*="background"] {
+    background: var(--sk-voice-custom-bg) !important;
+}
+
 .sk-voice-visualization canvas {
     width: 100% !important;
     height: 100% !important;

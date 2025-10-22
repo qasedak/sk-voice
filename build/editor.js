@@ -6,7 +6,7 @@
 (function (wp) {
     const { addFilter } = wp.hooks;
     const { createElement: el, Fragment } = wp.element;
-    const { InspectorControls } = wp.blockEditor;
+    const { InspectorControls, PanelColorSettings } = wp.blockEditor;
     const { PanelBody, ToggleControl, SelectControl, RangeControl } = wp.components;
     const { __ } = wp.i18n;
 
@@ -46,6 +46,10 @@
                     type: 'boolean',
                     default: false,
                 },
+                skVoiceBackgroundColor: {
+                    type: 'string',
+                    default: '',
+                },
             },
         };
     }
@@ -73,12 +77,51 @@
                 skVoiceSpeed,
                 skVoiceHeight,
                 skVoiceAutostart,
+                skVoiceBackgroundColor,
             } = attributes;
 
+            // If visualization is not enabled, return normal block edit
+            if (!skVoiceEnable) {
+                return el(
+                    Fragment,
+                    {},
+                    el(BlockEdit, props),
+                    el(
+                        InspectorControls,
+                        {},
+                        el(
+                            PanelBody,
+                            {
+                                title: __('SK Voice Visualization', 'sk-voice'),
+                                initialOpen: false,
+                            },
+                            el(ToggleControl, {
+                                label: __('Enable Visualization', 'sk-voice'),
+                                checked: skVoiceEnable,
+                                onChange: (value) => setAttributes({ skVoiceEnable: value }),
+                                help: __('Show SiriWave visualization with audio', 'sk-voice'),
+                            })
+                        )
+                    )
+                );
+            }
+
+            // If visualization is enabled, wrap with preview
             return el(
                 Fragment,
                 {},
-                el(BlockEdit, props),
+                el(
+                    'div',
+                    { className: 'sk-voice-wrapper sk-voice-editor-preview' },
+                    el('div', {
+                        className: 'sk-voice-visualization',
+                        style: { 
+                            height: skVoiceHeight + 'px',
+                            background: skVoiceBackgroundColor || undefined
+                        },
+                    }),
+                    el(BlockEdit, props)
+                ),
                 el(
                     InspectorControls,
                     {},
@@ -141,6 +184,20 @@
                                     help: __('Start animation automatically on page load', 'sk-voice'),
                                 })
                             )
+                    ),
+                    el(
+                        PanelColorSettings,
+                        {
+                            title: __('Background Color', 'sk-voice'),
+                            initialOpen: false,
+                            colorSettings: [
+                                {
+                                    value: skVoiceBackgroundColor,
+                                    onChange: (value) => setAttributes({ skVoiceBackgroundColor: value }),
+                                    label: __('Visualization Background', 'sk-voice'),
+                                }
+                            ]
+                        }
                     )
                 )
             );

@@ -131,9 +131,16 @@ class SK_Voice {
         $speed = isset($block['attrs']['skVoiceSpeed']) ? $block['attrs']['skVoiceSpeed'] : 0.2;
         $height = isset($block['attrs']['skVoiceHeight']) ? $block['attrs']['skVoiceHeight'] : 200;
         $autostart = isset($block['attrs']['skVoiceAutostart']) ? $block['attrs']['skVoiceAutostart'] : false;
+        $background_color = isset($block['attrs']['skVoiceBackgroundColor']) ? $block['attrs']['skVoiceBackgroundColor'] : '';
         
         // Create wrapper with visualization container
         $visualization_id = 'sk-voice-' . wp_unique_id();
+        
+        // Build inline style for custom background color
+        $inline_style = '';
+        if (!empty($background_color)) {
+            $inline_style = ' style="background: ' . esc_attr($background_color) . ';"';
+        }
         
         $wrapper = sprintf(
             '<div class="sk-voice-wrapper" data-style="%s" data-amplitude="%s" data-speed="%s" data-height="%s" data-autostart="%s">',
@@ -143,7 +150,7 @@ class SK_Voice {
             esc_attr($height),
             esc_attr($autostart ? 'true' : 'false')
         );
-        $wrapper .= '<div class="sk-voice-visualization" id="' . esc_attr($visualization_id) . '"></div>';
+        $wrapper .= '<div class="sk-voice-visualization" id="' . esc_attr($visualization_id) . '"' . $inline_style . '></div>';
         $wrapper .= $block_content;
         $wrapper .= '</div>';
         
