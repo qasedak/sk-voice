@@ -1,0 +1,27 @@
+{
+  "name": "sk-voice",
+  "version": "1.0.0",
+  "description": "Add voice visualizations to WordPress audio blocks",
+  "author": "Mohammad Anbarestany",
+  "license": "GPL-2.0-or-later",
+  "scripts": {
+    "build": "echo 'No build process needed - using vanilla JavaScript'",
+    "dev": "echo 'No dev process needed - using vanilla JavaScript'"
+  },
+  "keywords": [
+    "wordpress",
+    "plugin",
+    "audio",
+    "visualization",
+    "siriwave",
+    "block",
+    "gutenberg",
+    "fse"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/qasedak/sk-voice.git"
+  },
+  "dependencies": {},
+  "devDependencies": {}
+}
