@@ -17,6 +17,10 @@
             this.source = null;
             this.dataArray = null;
             this.isPlaying = false;
+            
+            // Smoothing for amplitude changes
+            this.smoothedAmplitude = 0;
+            this.smoothingFactor = 0.3; // Lower = smoother (0-1)
 
             // Get settings from data attributes
             this.settings = {
@@ -88,10 +92,11 @@
 
                 // Create and configure analyser
                 this.analyser = this.audioContext.createAnalyser();
-                this.analyser.fftSize = 512; // Increased for better frequency resolution
-                this.analyser.smoothingTimeConstant = 0.85; // Slight smoothing for cleaner visualization
+                this.analyser.fftSize = 2048; // Power of 2 for FFT
+                this.analyser.smoothingTimeConstant = 0.8; // Smooth the time domain data
 
-                const bufferLength = this.analyser.frequencyBinCount;
+                // Create buffer for time domain data (waveform)
+                const bufferLength = this.analyser.fftSize;
                 this.dataArray = new Uint8Array(bufferLength);
 
                 // Connect audio element to analyser (only once per audio element)
@@ -148,23 +153,36 @@
         updateAmplitude() {
             if (!this.isPlaying || !this.analyser || !this.siriWave) return;
 
-            // Get frequency data
-            this.analyser.getByteFrequencyData(this.dataArray);
+            // Get time domain data (waveform) instead of frequency data
+            // This is smoother and more directly represents audio amplitude
+            this.analyser.getByteTimeDomainData(this.dataArray);
 
-            // Calculate average amplitude from frequency data
-            let sum = 0;
+            // The zero level is at 128 in the time domain data
+            // Find the maximum amplitude deviation from the zero level
+            let maxAmplitude = 0;
             for (let i = 0; i < this.dataArray.length; i++) {
-                sum += this.dataArray[i];
+                const deviation = Math.abs(this.dataArray[i] - 128);
+                if (deviation > maxAmplitude) {
+                    maxAmplitude = deviation;
+                }
             }
-            const average = sum / this.dataArray.length;
 
-            // Normalize to 0-1 range and apply base amplitude setting
-            // The multiplication factor helps make the visualization more responsive
-            const normalizedAmplitude = (average / 255) * this.settings.amplitude * 3;
+            // Normalize: maxAmplitude is in range [0, 128]
+            // Scale to [0, 1] range
+            const instantAmplitude = maxAmplitude / 128;
 
-            // Set amplitude with a minimum value to keep animation visible even during silence
-            const finalAmplitude = Math.max(0.1, normalizedAmplitude);
-            this.siriWave.setAmplitude(finalAmplitude);
+            // Apply exponential moving average for additional smoothing
+            // This prevents any remaining jitter
+            this.smoothedAmplitude = 
+                this.smoothingFactor * instantAmplitude + 
+                (1 - this.smoothingFactor) * this.smoothedAmplitude;
+
+            // Scale amplitude based on user settings
+            // Multiply by 10 to match the demo's scaling behavior
+            const scaledAmplitude = this.smoothedAmplitude * this.settings.amplitude * 10;
+
+            // Set the amplitude (no minimum needed, can go to 0 during silence)
+            this.siriWave.setAmplitude(scaledAmplitude);
 
             // Continue updating on next animation frame
             requestAnimationFrame(() => this.updateAmplitude());
